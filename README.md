@@ -1,8 +1,49 @@
 # agent-card skill
 
-An agent skill for managing prepaid virtual Visa cards through [Agent Cards](https://agentcard.sh) MCP tools. Works with Claude Code, Codex, and any agent that supports [skills.sh](https://skills.sh).
+Give your AI agent a debit card. [Agent Cards](https://agentcard.sh) lets AI agents create and spend prepaid virtual Visa cards — each with a fixed budget, real card credentials, and full MCP integration. This skill teaches your agent how to use them.
 
-## Install
+Works with Claude Code, Codex, and any agent that supports [skills.sh](https://skills.sh).
+
+## Setup
+
+### 1. Create an Agent Cards account
+
+```bash
+npx agent-cards signup
+```
+
+### 2. Connect the MCP server
+
+**Option A — Automatic (Claude Code)**
+
+```bash
+npx agent-cards setup-mcp
+```
+
+This auto-configures Claude Code with the hosted MCP server. Restart Claude Code after running.
+
+**Option B — Manual (any MCP client)**
+
+Add to your MCP client config (Claude Desktop, Cursor, etc.):
+
+```json
+{
+  "mcpServers": {
+    "agent-cards": {
+      "url": "https://mcp.agentcard.sh/mcp",
+      "headers": {
+        "Authorization": "Bearer <your-jwt>"
+      }
+    }
+  }
+}
+```
+
+Get your JWT from `~/.agent-cards/config.json` after signing up.
+
+See the [MCP server repo](https://github.com/agent-cards/mcp) for more options (stdio, self-hosted, etc.).
+
+### 3. Install the skill
 
 ```bash
 npx skills add agent-cards/skill
@@ -10,27 +51,23 @@ npx skills add agent-cards/skill
 
 ## What it does
 
-This skill teaches your AI agent how to:
+Once installed, your agent knows how to:
 
-- **Create cards** — fund via Stripe Checkout, handle approval flows, poll until ready
-- **Check balances** — quick balance lookup formatted as dollars
-- **View card details** — PAN/CVV/expiry retrieval with email approval when required
-- **Close cards** — with mandatory user confirmation (irreversible)
-- **Support chat** — open conversations, send messages, read replies
-
-## Prerequisites
-
-You need the Agent Cards MCP server connected to your agent. See the [MCP server repo](https://github.com/agent-cards/mcp) for stdio and HTTP setup instructions.
+- **Create cards** — set a dollar amount, complete Stripe Checkout, get a card back
+- **Check balances** — quick balance lookup, formatted as dollars
+- **View card credentials** — full card number, CVV, expiry (with email approval for security)
+- **Close cards** — permanent closure with user confirmation
+- **Get support** — open and manage support conversations
 
 ## Usage
 
-After installing, use the `/agent-card` slash command in Claude Code:
+Use the `/agent-card` slash command in Claude Code:
 
 ```
 /agent-card
 ```
 
-Or just ask your agent to manage your cards — the skill activates when card management intent is detected.
+Or just ask naturally — the skill activates when your agent detects card management intent.
 
 ### Example prompts
 
@@ -39,20 +76,29 @@ Or just ask your agent to manage your cards — the skill activates when card ma
 - "What's the balance on my card?"
 - "I need the card number to pay for something"
 - "Close card xyz"
+- "I need help with my card"
 
-## Tools covered
+## MCP Tools
 
-| Tool | Purpose |
-|------|---------|
-| `list_cards` | List all cards for the authenticated user |
-| `create_card` | Create a new prepaid virtual Visa card |
-| `get_funding_status` | Poll checkout session status after payment |
-| `get_card_details` | Get decrypted PAN, CVV, expiry (requires approval) |
-| `check_balance` | Get card balance without revealing credentials |
-| `close_card` | Permanently close a card (irreversible) |
-| `start_support_chat` | Open a new support conversation |
-| `send_support_message` | Send a message in a support conversation |
-| `read_support_chat` | Read messages from a support conversation |
+These are the tools the skill orchestrates. You don't call them directly — the skill guides your agent through the right workflow.
+
+| Tool | What it does |
+|------|-------------|
+| `list_cards` | List all your virtual cards with balances and status |
+| `create_card` | Create a new prepaid Visa with a fixed USD budget |
+| `get_funding_status` | Poll until a new card is ready after payment |
+| `get_card_details` | Get decrypted card number, CVV, expiry |
+| `check_balance` | Quick balance check (no credentials exposed) |
+| `close_card` | Permanently close a card |
+| `start_support_chat` | Open a support conversation |
+| `send_support_message` | Send a message to support |
+| `read_support_chat` | Read support replies |
+
+## Links
+
+- [Agent Cards](https://agentcard.sh) — product homepage
+- [MCP Server](https://github.com/agent-cards/mcp) — MCP server setup and docs
+- [skills.sh](https://skills.sh) — agent skills directory
 
 ## License
 
