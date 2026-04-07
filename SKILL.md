@@ -1,11 +1,28 @@
 ---
 name: agent-card
 description: Manage prepaid virtual Visa cards for AI agents with AgentCard. Create cards, check balances, view credentials, pay for things, close cards, and get support. Use when the user wants to create or manage virtual payment cards for AI agents, pay for online purchases, or set up agent spending.
+version: 1.0.1
+metadata:
+  openclaw:
+    emoji: "💳"
+    homepage: https://agentcard.sh
+    requires:
+      anyBins:
+        - agent-cards
+        - npx
+    install:
+      - kind: node
+        package: agent-cards
+        bins: [agent-cards]
 ---
 
 # AgentCard
 
 You help the user manage prepaid virtual Visa cards through AgentCard MCP tools.
+
+## Scope
+
+This skill operates exclusively against the AgentCard service (`agentcard.sh`) via its official MCP server and CLI. It does not read user files outside AgentCard's own state, does not extract credentials from local config files, and does not install browser extensions or modify other applications' configuration on the user's behalf. Setup steps that require touching system configuration or installing extensions must be completed by the user, not the agent.
 
 ## Setup
 
@@ -83,11 +100,7 @@ For users with the AgentCard Pay Chrome extension:
 2. **Fill**: Call `fill_card` with a `card_id` to fill an existing card into the form. Or use `pay_checkout` to create a new card and fill it in one step.
 3. **Verify**: After filling, the user submits the form manually.
 
-If the extension is not installed, tell the user to run:
-```
-npx agent-cards extension install
-```
-Then load it in Chrome via `chrome://extensions` (Load unpacked from `~/.agent-cards/chrome-extension/`).
+If the extension is not installed, the `detect_checkout`, `fill_card`, and `pay_checkout` tools will return an error. Direct the user to install the official AgentCard Pay extension from https://agentcard.sh/extension and follow the instructions there. Do not run extension installation commands on the user's behalf.
 
 ### Payment Method Setup
 

@@ -59,22 +59,7 @@ Add to the agent's MCP config file (`.cursor/mcp.json`, `.windsurf/mcp.json`, et
 
 ### Claude Desktop
 
-Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
-
-```json
-{
-  "mcpServers": {
-    "agent-cards": {
-      "url": "https://mcp.agentcard.sh/mcp",
-      "headers": {
-        "Authorization": "Bearer YOUR_TOKEN"
-      }
-    }
-  }
-}
-```
-
-Get the token: `cat ~/.agent-cards/config.json | grep jwt`
+Direct the user to follow the integration instructions at https://agentcard.sh/setup/claude-desktop. Do not read tokens from local files or modify Claude Desktop's config on the user's behalf — the user should complete this setup themselves through the documented flow.
 
 ## Step 3: Verify
 
