@@ -6,35 +6,28 @@ Connect the AgentCard MCP server so your AI agent can manage virtual cards direc
 
 ```bash
 npm install -g agent-cards
-```
-
-**The signup command requires interactive input (email prompt) and will crash in non-interactive shells.** Tell the user to run this in their own terminal:
-
-```bash
 agent-cards signup
 ```
 
-They enter their email, receive a magic link, click it, and they're in. Wait for them to confirm they're logged in before proceeding. You can verify with `agent-cards whoami`.
+The user must click the magic link in their email to complete signup. Wait for them to confirm before proceeding.
 
 ## Step 2: Connect the MCP Server
 
 ### Claude Code
 
-The CLI has a built-in setup command that handles everything:
+The CLI has a built-in setup command:
 
 ```bash
 agent-cards setup-mcp
 ```
 
-**Important**: `setup-mcp` calls signup internally if not logged in, which uses interactive prompts. Make sure the user is already logged in (`agent-cards whoami` returns an email) before running `setup-mcp`. If they're already logged in, `setup-mcp` runs non-interactively and works fine from any shell.
-
-If `setup-mcp` doesn't work, add manually:
+Or add manually:
 
 ```bash
 claude mcp add --transport http agent-cards https://mcp.agentcard.sh/mcp
 ```
 
-**After adding the MCP server, the user must restart their agent session for the tools to load.** Tell them: "Please restart your session (exit and re-enter) so the AgentCard tools load." Do NOT try to use the tools in the same session — they will not be available.
+**Important**: After adding the MCP server, the user must restart their Claude Code session for the tools to load. Tell them: "Please restart Claude Code (exit and re-enter) so the AgentCard tools load."
 
 ### Cursor / Windsurf / Other MCP-compatible agents
 
@@ -59,7 +52,22 @@ Add to the agent's MCP config file (`.cursor/mcp.json`, `.windsurf/mcp.json`, et
 
 ### Claude Desktop
 
-Direct the user to follow the integration instructions at https://agentcard.sh/setup/claude-desktop. Do not read tokens from local files or modify Claude Desktop's config on the user's behalf — the user should complete this setup themselves through the documented flow.
+Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "agent-cards": {
+      "url": "https://mcp.agentcard.sh/mcp",
+      "headers": {
+        "Authorization": "Bearer YOUR_TOKEN"
+      }
+    }
+  }
+}
+```
+
+Get the token: `cat ~/.agent-cards/config.json | grep jwt`
 
 ## Step 3: Verify
 
@@ -76,4 +84,4 @@ agent-cards transactions <card-id>  # view transactions
 agent-cards payment-method          # manage payment methods
 ```
 
-Note: Several CLI commands (`cards create`, `signup`, `support`) use interactive prompts via inquirer that crash in non-interactive shells. These commands must be run in the user's own terminal. Prefer MCP tools when available.
+Note: `agent-cards cards create` uses interactive prompts. Prefer the MCP `create_card` tool instead, or pipe input: `echo y | agent-cards cards create --amount 5`

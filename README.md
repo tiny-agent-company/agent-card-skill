@@ -43,30 +43,28 @@ Copy-paste this into your AI agent to have it set everything up:
 ```
 Set up AgentCard so I can create and manage virtual Visa cards from this agent.
 
-Do these steps in order. Some require me to act — wait for my confirmation before moving on.
+Do these steps in order. Some steps require me to do something — wait for my confirmation before moving on.
 
-1. Install the skill (non-interactive):
-   npx skills add tiny-agent-company/agent-card-skill -y
+1. Install the AgentCard skill:
+   npx skills add tiny-agent-company/agent-card-skill
 
-2. Install the CLI (non-interactive):
+2. Install the CLI:
    npm install -g agent-cards
 
-3. Check if I'm logged in:
+3. Check if I'm already logged in:
    agent-cards whoami
+   If not logged in, run: agent-cards signup
+   (I need to click the magic link in my email — wait for me to confirm)
 
-   If not logged in, tell me to run this in my own terminal (it has interactive prompts that crash in your shell):
-   agent-cards signup
-   Then wait for me to confirm.
-
-4. Once I'm logged in, connect the MCP server (non-interactive when already logged in):
+4. Connect the MCP server:
    agent-cards setup-mcp
-
-   If that fails, run: claude mcp add --transport http agent-cards https://mcp.agentcard.sh/mcp
+   If that doesn't work, run: claude mcp add --transport http agent-cards https://mcp.agentcard.sh/mcp
 
 5. Tell me to restart this session so the MCP tools load.
-   Do NOT try to use the tools or fall back to curl — they require a session restart.
+   Do NOT try to use the tools in this session — they won't work until restart.
+   Do NOT fall back to curl or raw API calls.
 
-After I restart, I'll ask you to list my cards to verify.
+After I restart the session, I'll ask you to list my cards to verify it works.
 ```
 
 ## Don't Have an Account?
@@ -79,7 +77,7 @@ agent-cards signup
 ## What's Included
 
 **Skill** (`SKILL.md`) — Procedural knowledge that teaches the agent:
-- When and how to use each of the 16 AgentCard tools
+- When and how to use each of the 23 AgentCard tools
 - Workflows: card creation, balance checks, payments, checkout autofill, support
 - Safety rules: never expose PAN/CVV unprompted, confirm before closing cards
 - Error handling: waitlists, approval flows, KYC requirements
@@ -94,7 +92,9 @@ agent-cards signup
 | Manage cards | `list_cards`, `check_balance`, `get_card_details`, `close_card` |
 | View spending | `list_transactions` |
 | Pay for things | `detect_checkout`, `fill_card`, `pay_checkout` |
-| Billing | `setup_payment_method`, `remove_payment_method` |
+| Payment methods | `setup_payment_method`, `remove_payment_method`, `list_payment_methods`, `set_default_payment_method` |
+| Plans & limits | `get_plan`, `upgrade_plan`, `cancel_plan` |
+| Test vs live mode | `get_mode`, `set_mode` |
 | Approvals | `approve_request` |
 | Support | `start_support_chat`, `send_support_message`, `read_support_chat` |
 
