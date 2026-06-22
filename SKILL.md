@@ -41,8 +41,6 @@ Tools are prefixed `mcp__agent-cards__*`. If no AgentCard tools are available, r
 | `get_plan` | Show current plan, card limits, monthly usage, and upgrade options |
 | `upgrade_plan` | Start a Stripe Checkout to upgrade to the Basic plan |
 | `cancel_plan` | Cancel the active paid subscription (revert to Free) |
-| `get_mode` | Show the account's issuing mode (test = sandbox, prod = live cards) |
-| `set_mode` | Switch issuing mode between test (sandbox) and prod (live cards) |
 | `approve_request` | Approve or deny a pending approval request |
 | `start_support_chat` | Open a new support conversation |
 | `send_support_message` | Send a message in a support conversation |
@@ -64,15 +62,7 @@ When the user's intent is unclear, start with `list_cards` to see what exists. U
 6. **If 202 (approval required)**: an email is sent to the account owner. Tell the user to check their email and approve. Once approved, call `approve_request` with the approval ID.
 7. **On success**: present the card summary (last 4, balance, expiry). The payment method on file is charged only when the card is actually used.
 
-### Test vs Live Mode
-
-New accounts start in **test** mode — `create_card` issues sandbox cards (no real charges, not usable at real merchants). To issue real cards funded by the saved payment method:
-
-1. Call `get_mode` to check the current mode.
-2. **Confirm with the user before switching to prod** — cards created in prod mode draw on their real payment method when used.
-3. Call `set_mode` with `mode: 'prod'`. Switch back any time with `set_mode` `mode: 'test'`.
-
-If a created card's number looks like a test card (`4242…`), the account is still in test mode — tell the user and offer to `set_mode` to `prod`.
+All cards are live — there is no test/sandbox mode. A card draws on the user's real payment method when used, so confirm before creating one.
 
 ### Checking Balance
 
@@ -121,7 +111,6 @@ Then load it in Chrome via `chrome://extensions` (Load unpacked from `~/.agent-c
 2. Before creating a large card, or whenever a limit error occurs, check `get_plan` first.
 3. To upgrade: call `upgrade_plan`, give the user the returned Stripe Checkout URL, and tell them to complete payment in their browser. The plan updates automatically afterward — confirm with `get_plan`.
 4. To cancel a paid subscription: call `cancel_plan` (reverts to Free). Confirm with the user first.
-5. Test-mode cards bypass plan limits and don't count toward monthly usage.
 
 ### Support Chat
 
@@ -133,7 +122,7 @@ Then load it in Chrome via `chrome://extensions` (Load unpacked from `~/.agent-c
 
 - **Never proactively display PAN or CVV.** Only show when the user explicitly asks.
 - **Always confirm before closing a card.** Closing is permanent and irreversible.
-- **Confirm before switching to prod mode.** Prod cards draw on the user's real payment method.
+- **Confirm before creating a card.** Every card is live and draws on the user's real payment method when used.
 - **Format money as dollars.** Display `$50.00` not `5000 cents`. Divide cents by 100.
 - **Track IDs across the conversation.** Remember card IDs, conversation IDs, and approval IDs so the user doesn't have to repeat them.
 
@@ -145,10 +134,6 @@ Then load it in Chrome via `chrome://extensions` (Load unpacked from `~/.agent-c
 - **`payment_method_required`**: No saved payment method. Call `setup_payment_method` first.
 - **`amount_exceeds_limit` / `card_limit_reached` (400)**: A plan limit was hit. Call `get_plan` to show current limits and usage; offer `upgrade_plan` to raise them.
 - **Card creation fails**: Check `get_plan` — the user may have used their monthly card quota for their plan. Suggest upgrading or waiting until next month.
-
-## Testing
-
-For testing without real payment, the account's test mode (see [Test vs Live Mode](#test-vs-live-mode)) issues sandbox cards. You can also pass `sandbox: true` to `create_card` to force a test card immediately. Sandbox cards incur no real charges and don't count toward plan limits.
 
 ## CLI Reference
 

@@ -94,7 +94,6 @@ agent-cards signup
 | Pay for things | `detect_checkout`, `fill_card`, `pay_checkout` |
 | Payment methods | `setup_payment_method`, `remove_payment_method`, `list_payment_methods`, `set_default_payment_method` |
 | Plans & limits | `get_plan`, `upgrade_plan`, `cancel_plan` |
-| Test vs live mode | `get_mode`, `set_mode` |
 | Approvals | `approve_request` |
 | Support | `start_support_chat`, `send_support_message`, `read_support_chat` |
 
