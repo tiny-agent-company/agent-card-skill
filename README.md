@@ -77,9 +77,9 @@ agent-cards signup
 ## What's Included
 
 **Skill** (`SKILL.md`) — Procedural knowledge that teaches the agent:
-- When and how to use each of the 23 AgentCard tools
-- Workflows: card creation, balance checks, payments, checkout autofill, support
-- Safety rules: never expose PAN/CVV unprompted, confirm before closing cards
+- When and how to use each of the 27 AgentCard tools
+- Workflows: card creation, balance checks, shopping & checkout (`buy`), payments, checkout autofill, plans, support
+- Safety rules: never expose PAN/CVV unprompted, confirm before closing cards or placing an order
 - Error handling: waitlists, approval flows, KYC requirements
 
 **Setup guide** (`references/setup.md`) — Connection instructions the agent reads if tools aren't available yet.
@@ -90,10 +90,12 @@ agent-cards signup
 |-----------|-------|
 | Issue virtual cards | `create_card`, `submit_user_info` |
 | Manage cards | `list_cards`, `check_balance`, `get_card_details`, `close_card` |
-| View spending | `list_transactions` |
+| View spending | `list_transactions`, `list_all_transactions` |
+| Shop & check out | `buy`, `get_instructions`, `buy_list_merchants`, `buy_unlink_merchant` |
 | Pay for things | `detect_checkout`, `fill_card`, `pay_checkout` |
 | Payment methods | `setup_payment_method`, `remove_payment_method`, `list_payment_methods`, `set_default_payment_method` |
 | Plans & limits | `get_plan`, `upgrade_plan`, `cancel_plan` |
+| Connected apps | `list_connections` |
 | Approvals | `approve_request` |
 | Support | `start_support_chat`, `send_support_message`, `read_support_chat` |
 

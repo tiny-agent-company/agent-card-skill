@@ -1,18 +1,18 @@
 ---
 name: agent-card
-description: Manage prepaid virtual Visa cards for AI agents with AgentCard. Create cards, check balances, view credentials, pay for things, close cards, manage plans, and get support. Use when the user wants to create or manage virtual payment cards for AI agents, pay for online purchases, set up agent spending, or configure card billing and limits.
+description: Manage prepaid virtual Visa cards for AI agents with AgentCard. Create cards, check balances, view credentials, pay for things, shop and check out at merchants like DoorDash, close cards, manage plans, and get support. Use when the user wants to create or manage virtual payment cards for AI agents, pay for online purchases, shop on their behalf, set up agent spending, or configure card billing and limits.
 license: Proprietary
 compatibility: Requires the AgentCard MCP server (https://mcp.agentcard.sh/mcp). Checkout autofill workflows also need the AgentCard Pay Chrome extension.
 metadata:
   homepage: https://agentcard.sh
   docs: https://docs.agentcard.sh
   registry: https://skills.sh
-  version: "1.1.0"
+  version: "1.2.0"
 ---
 
 # AgentCard
 
-You help the user manage prepaid virtual Visa cards through AgentCard MCP tools.
+You help the user manage prepaid virtual Visa cards and shop on their behalf through AgentCard MCP tools.
 
 ## Setup
 
@@ -29,11 +29,16 @@ Tools are prefixed `mcp__agent-cards__*`. If no AgentCard tools are available, r
 | `check_balance` | Check live balance without exposing credentials |
 | `get_card_details` | Get decrypted PAN, CVV, expiry (may require approval) |
 | `close_card` | Permanently close a card (irreversible) |
-| `list_transactions` | List transactions with amount, merchant, status, timestamps |
+| `list_transactions` | List a single card's transactions with amount, merchant, status, timestamps |
+| `list_all_transactions` | List transactions across all your cards in one flat list, each tagged with its card (id + last4) |
 | `setup_payment_method` | Save a payment method via Stripe for future card creation |
 | `remove_payment_method` | Remove a saved payment method from Stripe |
 | `list_payment_methods` | List saved payment methods (id, brand, last4, expiry; marks the default) |
 | `set_default_payment_method` | Choose which saved payment method funds new cards |
+| `buy` | Shop and check out at a supported merchant (DoorDash, Good Eggs, Rappi) from a natural-language request. This is the entire shopping surface — it builds the cart, asks for the delivery address, confirms the total, and places the order, auto-creating a card to pay |
+| `get_instructions` | Get the latest shopping/checkout usage guide. Call this BEFORE using `buy` |
+| `buy_list_merchants` | List supported merchants and whether the user has linked each one |
+| `buy_unlink_merchant` | Disconnect a linked merchant (drops the saved session; the user must re-link before shopping it again) |
 | `detect_checkout` | Check if current browser tab is a checkout page (requires Chrome extension) |
 | `fill_card` | Fill an existing card into a checkout form (requires Chrome extension) |
 | `pay_checkout` | Auto-create card and fill checkout form in one step (requires Chrome extension) |
@@ -41,6 +46,7 @@ Tools are prefixed `mcp__agent-cards__*`. If no AgentCard tools are available, r
 | `get_plan` | Show current plan, card limits, monthly usage, and upgrade options |
 | `upgrade_plan` | Start a Stripe Checkout to upgrade to the Basic plan |
 | `cancel_plan` | Cancel the active paid subscription (revert to Free) |
+| `list_connections` | List the third-party apps connected to the account via OAuth (read-only) |
 | `approve_request` | Approve or deny a pending approval request |
 | `start_support_chat` | Open a new support conversation |
 | `send_support_message` | Send a message in a support conversation |
@@ -62,7 +68,17 @@ When the user's intent is unclear, start with `list_cards` to see what exists. U
 6. **If 202 (approval required)**: an email is sent to the account owner. Tell the user to check their email and approve. Once approved, call `approve_request` with the approval ID.
 7. **On success**: present the card summary (last 4, balance, expiry). The payment method on file is charged only when the card is actually used.
 
-All cards are live — there is no test/sandbox mode. A card draws on the user's real payment method when used, so confirm before creating one.
+All cards are live — there is no test/sandbox mode on the consumer MCP. A card draws on the user's real payment method when used, so confirm before creating one.
+
+### Buying & Checking Out (Shopping)
+
+The `buy` tool is the entire shopping surface for supported merchants (DoorDash is live; Good Eggs and Rappi where available). Do **not** look for separate search, cart, or checkout tools — `buy` runs the whole flow conversationally and creates a card under the hood to pay.
+
+1. **Get the latest guide first.** Call `get_instructions` before using `buy` — it returns the current shopping/checkout usage guide (the flow evolves over time).
+2. **Start an order** with a natural-language request, e.g. `buy("order a caesar salad from Zuni on DoorDash")`. It returns a `conversation_id`.
+3. **Continue the same order** by calling `buy` again with that `conversation_id` to answer its questions (delivery address, confirm the cart + total) or to place the order. Keep passing the same `conversation_id` so the cart and context persist.
+4. **Checkout only happens after the user explicitly confirms.** This is a real purchase — confirm the cart and total with the user before placing the order.
+5. Use `buy_list_merchants` to see which merchants are available and whether the user has linked each. To disconnect one, use `buy_unlink_merchant` — confirm with the user first, since it drops the saved session and they must re-link before shopping that merchant again.
 
 ### Checking Balance
 
@@ -76,7 +92,9 @@ Only use `get_card_details` when the user explicitly needs the full card number,
 
 ### Viewing Transactions
 
-Call `list_transactions` with the `card_id`. Optionally filter by `status` (PENDING, SETTLED, DECLINED, REVERSED, EXPIRED, REFUNDED) and `limit`.
+Call `list_transactions` with the `card_id` for a single card. Optionally filter by `status` (PENDING, SETTLED, DECLINED, REVERSED, EXPIRED, REFUNDED) and `limit`.
+
+To see activity across every card at once, call `list_all_transactions` (no `card_id`) — it returns a flat list of all your transactions, each tagged with the card it belongs to. Supports `limit`, `offset`, and `status`.
 
 ### Closing a Card
 
@@ -112,6 +130,10 @@ Then load it in Chrome via `chrome://extensions` (Load unpacked from `~/.agent-c
 3. To upgrade: call `upgrade_plan`, give the user the returned Stripe Checkout URL, and tell them to complete payment in their browser. The plan updates automatically afterward — confirm with `get_plan`.
 4. To cancel a paid subscription: call `cancel_plan` (reverts to Free). Confirm with the user first.
 
+### Connected Apps
+
+Call `list_connections` to show which third-party apps the user has connected to their AgentCard account via OAuth, when each was connected, and whether it is still active. Read-only — to revoke an app, the user runs `agent-cards connections revoke <clientId>` in the CLI.
+
 ### Support Chat
 
 1. Call `start_support_chat` with an initial message. Save the returned `conversation_id`.
@@ -123,6 +145,8 @@ Then load it in Chrome via `chrome://extensions` (Load unpacked from `~/.agent-c
 - **Never proactively display PAN or CVV.** Only show when the user explicitly asks.
 - **Always confirm before closing a card.** Closing is permanent and irreversible.
 - **Confirm before creating a card.** Every card is live and draws on the user's real payment method when used.
+- **Confirm before placing an order with `buy`.** Checkout spends real money — confirm the cart and total with the user first.
+- **Confirm before unlinking a merchant.** `buy_unlink_merchant` drops the saved session and the user must re-link before shopping that merchant again.
 - **Format money as dollars.** Display `$50.00` not `5000 cents`. Divide cents by 100.
 - **Track IDs across the conversation.** Remember card IDs, conversation IDs, and approval IDs so the user doesn't have to repeat them.
 
@@ -143,10 +167,11 @@ If MCP tools aren't loaded yet (e.g. the server was just added and the session h
 agent-cards cards list                  # list all cards
 agent-cards cards create --amount 5     # create a $5 card (interactive prompt)
 agent-cards balance <card-id>           # check balance
-agent-cards transactions <card-id>      # list transactions
+agent-cards transactions <card-id>      # list one card's transactions
+agent-cards transactions                # list transactions across all cards
 agent-cards payment-method              # manage payment methods
 agent-cards setup-mcp                   # configure MCP server in Claude Code
 agent-cards support                     # start support chat
 ```
 
-Note: `cards create` uses interactive prompts that may not work in all shells. Pipe input if needed: `echo y | agent-cards cards create --amount 5`. Prefer MCP tools when available.
+**Warning**: Several CLI commands (`cards create`, `signup`, `support`) use interactive prompts that crash in non-interactive shells. Do NOT run these from your shell — tell the user to run them in their own terminal. Commands safe to run from any shell: `whoami`, `cards list`, `balance`, `transactions`, `payment-method`. Prefer MCP tools when available.
