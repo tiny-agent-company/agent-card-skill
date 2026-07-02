@@ -31,6 +31,8 @@ Tools are prefixed `mcp__agent-cards__*`. If no AgentCard tools are available, r
 | `close_card` | Permanently close a card (irreversible) |
 | `list_transactions` | List a single card's transactions with amount, merchant, status, timestamps |
 | `list_all_transactions` | List transactions across all your cards in one flat list, each tagged with its card (id + last4) |
+| `list_transactions_by_payment_method` | List transactions grouped by payment method (wallet USDC spend, saved-card spend, Apple/Google Pay wallet deposits) with merchant info and the buy order behind each purchase |
+| `whoami` | Show the authenticated account: email, name, plan, KYC + account status, and whether the session is a personal login or a third-party OAuth connection |
 | `setup_payment_method` | Save a payment method via Stripe for future card creation |
 | `remove_payment_method` | Remove a saved payment method from Stripe |
 | `list_payment_methods` | List saved payment methods (id, brand, last4, expiry; marks the default) |
@@ -95,6 +97,8 @@ Only use `get_card_details` when the user explicitly needs the full card number,
 Call `list_transactions` with the `card_id` for a single card. Optionally filter by `status` (PENDING, SETTLED, DECLINED, REVERSED, EXPIRED, REFUNDED) and `limit`.
 
 To see activity across every card at once, call `list_all_transactions` (no `card_id`) — it returns a flat list of all your transactions, each tagged with the card it belongs to. Supports `limit`, `offset`, and `status`.
+
+For "what did I spend, and how did I pay" questions, call `list_transactions_by_payment_method` — it groups the account's activity by payment method (wallet USDC spend, legacy saved-card spend, sandbox spend, and Apple Pay / Google Pay wallet deposits), with all-time totals per method, merchant name + MCC per row, and the buy order (merchant, order id, total) behind purchases made through `buy`. Line-level items aren't stored server-side — fetch a merchant's order history via `buy` when you need them.
 
 ### Closing a Card
 

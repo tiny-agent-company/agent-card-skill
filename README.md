@@ -90,12 +90,13 @@ agent-cards signup
 |-----------|-------|
 | Issue virtual cards | `create_card`, `submit_user_info` |
 | Manage cards | `list_cards`, `check_balance`, `get_card_details`, `close_card` |
-| View spending | `list_transactions`, `list_all_transactions` |
+| View spending | `list_transactions`, `list_all_transactions`, `list_transactions_by_payment_method` |
 | Shop & check out | `buy`, `get_instructions`, `buy_list_merchants`, `buy_unlink_merchant` |
 | Pay for things | `detect_checkout`, `fill_card`, `pay_checkout` |
 | Payment methods | `setup_payment_method`, `remove_payment_method`, `list_payment_methods`, `set_default_payment_method` |
 | Plans & limits | `get_plan`, `upgrade_plan`, `cancel_plan` |
 | Connected apps | `list_connections` |
+| Account identity | `whoami` |
 | Approvals | `approve_request` |
 | Support | `start_support_chat`, `send_support_message`, `read_support_chat` |
 
