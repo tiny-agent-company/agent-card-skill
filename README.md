@@ -1,6 +1,6 @@
 # AgentCard Skill
 
-Give any AI agent the ability to create and manage prepaid virtual Visa cards.
+Give any AI agent the ability to create and manage virtual Visa cards, funded from a wallet the user tops up with Apple Pay or Google Pay.
 
 This skill teaches AI agents how to use [AgentCard](https://agentcard.sh) MCP tools — creating cards, checking balances, paying for things, and more. It works with Claude Code, Cursor, Cline, Windsurf, and [40+ other agents](https://skills.sh).
 
@@ -77,10 +77,10 @@ agent-cards signup
 ## What's Included
 
 **Skill** (`SKILL.md`) — Procedural knowledge that teaches the agent:
-- When and how to use each of the 27 AgentCard tools
-- Workflows: card creation, balance checks, shopping & checkout (`buy`), payments, checkout autofill, plans, support
-- Safety rules: never expose PAN/CVV unprompted, confirm before closing cards or placing an order
-- Error handling: waitlists, approval flows, KYC requirements
+- When and how to use each of the 44 AgentCard tools
+- Workflows: wallet funding (with the one-time verification code), card creation, single-use vs multi-use cards, balance checks, shopping & checkout (`buy`), payments, checkout autofill, withdrawals, plans, support
+- Safety rules: never expose PAN/CVV unprompted, confirm before closing cards, placing an order, or withdrawing
+- Error handling: verification codes, KYC, funding gates, approval flows
 
 **Setup guide** (`references/setup.md`) — Connection instructions the agent reads if tools aren't available yet.
 
@@ -88,8 +88,12 @@ agent-cards signup
 
 | Capability | Tools |
 |-----------|-------|
+| Fund the wallet | `get_wallet`, `fund_wallet`, `start_phone_verification`, `verify_phone`, `redeem_code`, `list_codes` |
 | Issue virtual cards | `create_card`, `submit_user_info` |
-| Manage cards | `list_cards`, `check_balance`, `get_card_details`, `close_card` |
+| Verify identity | `start_kyc`, `get_kyc_status` |
+| Manage cards | `list_cards`, `check_balance`, `get_card_details`, `close_card`, `pause_card`, `resume_card`, `update_card_limit` |
+| Withdraw funds | `withdraw_wallet`, `create_withdrawal_recipient` |
+| Rewards | `get_rewards`, `redeem_rewards` |
 | View spending | `list_transactions`, `list_all_transactions`, `list_transactions_by_payment_method` |
 | Shop & check out | `buy`, `get_instructions`, `buy_list_merchants`, `buy_unlink_merchant` |
 | Pay for things | `detect_checkout`, `fill_card`, `pay_checkout` |

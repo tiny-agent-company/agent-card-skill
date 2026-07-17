@@ -1,18 +1,20 @@
 ---
 name: agent-card
-description: Manage prepaid virtual Visa cards for AI agents with AgentCard. Create cards, check balances, view credentials, pay for things, shop and check out at merchants like DoorDash, close cards, manage plans, and get support. Use when the user wants to create or manage virtual payment cards for AI agents, pay for online purchases, shop on their behalf, set up agent spending, or configure card billing and limits.
+description: Manage virtual Visa cards for AI agents with AgentCard. Fund a wallet with Apple Pay or Google Pay, create single-use or multi-use cards, check balances, view credentials, pay for things, shop and check out at merchants like DoorDash, close cards, manage plans, and get support. Use when the user wants to create or manage virtual payment cards for AI agents, fund their AgentCard wallet, pay for online purchases, shop on their behalf, set up agent spending, or configure card billing and limits.
 license: Proprietary
 compatibility: Requires the AgentCard MCP server (https://mcp.agentcard.sh/mcp). Checkout autofill workflows also need the AgentCard Pay Chrome extension.
 metadata:
   homepage: https://agentcard.sh
   docs: https://docs.agentcard.sh
   registry: https://skills.sh
-  version: "1.2.0"
+  version: "1.3.0"
 ---
 
 # AgentCard
 
-You help the user manage prepaid virtual Visa cards and shop on their behalf through AgentCard MCP tools.
+You help the user manage virtual Visa cards and shop on their behalf through AgentCard MCP tools.
+
+Cards are funded from the user's AgentCard **wallet**. The user adds money with Apple Pay or Google Pay (funds are held as USDC, but the user always funds and spends in USD). First-time funding requires a one-time identity + verification step — the workflows below walk through it.
 
 ## Setup
 
@@ -25,18 +27,33 @@ Tools are prefixed `mcp__agent-cards__*`. If no AgentCard tools are available, r
 | Tool | Purpose |
 |------|---------|
 | `list_cards` | List all cards with IDs, last four digits, expiry, balance, and status |
-| `create_card` | Create a new virtual Visa card (requires saved payment method; limits depend on plan — see `get_plan`) |
+| `create_card` | Create a new virtual Visa card funded from the wallet balance (single-use by default; pass `type: "multi_use"` for subscriptions — see Card Types) |
 | `check_balance` | Check live balance without exposing credentials |
 | `get_card_details` | Get decrypted PAN, CVV, expiry (may require approval) |
 | `close_card` | Permanently close a card (irreversible) |
+| `pause_card` | Block new charges on a multi-use card (reversible) |
+| `resume_card` | Unblock a paused multi-use card |
+| `update_card_limit` | Resize a multi-use card's total limit (raising it draws on the wallet balance) |
+| `get_wallet` | Show the funding wallet, its balance, and status |
+| `fund_wallet` | Add funds in USD via Apple Pay / Google Pay — returns a single-use payment link to hand the user |
+| `start_phone_verification` | Send (or re-send) the one-time verification code required before funding; reports the masked destination (text or email) |
+| `verify_phone` | Check the one-time code the user reads back (verification stays fresh for 60 days) |
+| `withdraw_wallet` | Withdraw wallet funds to a saved bank account or as USDC on Base (executed by the AgentCard team, typically 1-3 business days) |
+| `create_withdrawal_recipient` | Save a bank account (ACH or international wire) as a withdrawal destination |
+| `redeem_code` | Apply a promo code and credit the wallet (once per user per code) |
+| `list_codes` | Show which promo codes the user has used and which are still available |
+| `start_kyc` | Begin conversational identity verification (government ID photo → confirm fields → short browser face scan) |
+| `get_kyc_status` | Poll identity verification status until verified |
+| `get_rewards` | Show the TOKENBACK rewards balance earned on AI-card spend |
+| `redeem_rewards` | Redeem accrued TOKENBACK |
 | `list_transactions` | List a single card's transactions with amount, merchant, status, timestamps |
 | `list_all_transactions` | List transactions across all your cards in one flat list, each tagged with its card (id + last4) |
 | `list_transactions_by_payment_method` | List transactions grouped by payment method (wallet USDC spend, saved-card spend, Apple/Google Pay wallet deposits) with merchant info and the buy order behind each purchase |
 | `whoami` | Show the authenticated account: email, name, plan, KYC + account status, and whether the session is a personal login or a third-party OAuth connection |
-| `setup_payment_method` | Save a payment method via Stripe for future card creation |
+| `setup_payment_method` | Save a payment method via Stripe |
 | `remove_payment_method` | Remove a saved payment method from Stripe |
 | `list_payment_methods` | List saved payment methods (id, brand, last4, expiry; marks the default) |
-| `set_default_payment_method` | Choose which saved payment method funds new cards |
+| `set_default_payment_method` | Choose the default saved payment method |
 | `buy` | Shop and check out at a supported merchant (DoorDash, Good Eggs, Rappi) from a natural-language request. This is the entire shopping surface — it builds the cart, asks for the delivery address, confirms the total, and places the order, auto-creating a card to pay |
 | `get_instructions` | Get the latest shopping/checkout usage guide. Call this BEFORE using `buy` |
 | `buy_list_merchants` | List supported merchants and whether the user has linked each one |
@@ -44,7 +61,7 @@ Tools are prefixed `mcp__agent-cards__*`. If no AgentCard tools are available, r
 | `detect_checkout` | Check if current browser tab is a checkout page (requires Chrome extension) |
 | `fill_card` | Fill an existing card into a checkout form (requires Chrome extension) |
 | `pay_checkout` | Auto-create card and fill checkout form in one step (requires Chrome extension) |
-| `submit_user_info` | Submit KYC info (name, DOB, phone) required before first card |
+| `submit_user_info` | Submit the phone number + terms acceptance required before the first card |
 | `get_plan` | Show current plan, card limits, monthly usage, and upgrade options |
 | `upgrade_plan` | Start a Stripe Checkout to upgrade to the Basic plan |
 | `cancel_plan` | Cancel the active paid subscription (revert to Free) |
@@ -58,19 +75,48 @@ Tools are prefixed `mcp__agent-cards__*`. If no AgentCard tools are available, r
 
 ### Orientation
 
-When the user's intent is unclear, start with `list_cards` to see what exists. Use card IDs from responses in subsequent calls.
+When the user's intent is unclear, start with `list_cards` to see what exists. Use card IDs from responses in subsequent calls. For money questions, `get_wallet` shows the balance that backs card creation.
+
+### Funding the Wallet
+
+1. Call `get_wallet` to see the current balance and wallet status.
+2. Call `fund_wallet` with the amount in cents. It returns a **single-use payment link** — relay it to the user EXACTLY as returned (never shorten, unfurl, or paraphrase the URL) and tell them to open it and pay with Apple Pay or Google Pay. Funds land in the wallet within minutes.
+3. **If `fund_wallet` reports verification is required**: it automatically sends the user a one-time code and reports where it went (text message or email, masked). Ask the user for the code, call `verify_phone` with it, then call `fund_wallet` again. The verification stays fresh for 60 days.
+4. **If the code never arrives**: call `start_phone_verification` to re-send it (rate-limited to a few sends per 10 minutes — don't spam it).
+5. **If the code can't be sent at all** (no verified identity on file yet — typical for brand-new accounts): the user must complete identity first. Run the Creating a Card ladder (`submit_user_info`, then `start_kyc`) — the verified identity supplies the phone number, then funding works.
+6. The payment link is single-use — if it gets consumed or expires, just call `fund_wallet` again for a fresh one.
+7. If the user has a promo code, `redeem_code` applies it and credits the wallet directly; `list_codes` shows what's been used.
 
 ### Creating a Card
 
-1. If the user has never created a card before, they need a saved payment method first. Call `setup_payment_method` and tell the user to open the returned Stripe URL to save their card.
-2. Ask the user for the funding amount. Convert dollars to cents (e.g. $25 = 2500). Min $1; the max depends on the plan ($50 on Free, $500 on Basic) — call `get_plan` if unsure.
-3. Call `create_card` with `amount_cents`.
-4. **If `user_info_required`**: collect first name, last name, DOB, phone number. Confirm the user accepts the Stripe Issuing cardholder terms. Call `submit_user_info` with `terms_accepted: true`, then retry `create_card`.
-5. **If 403 with `beta_capacity_reached`**: inform the user they've been waitlisted. Stop.
-6. **If 202 (approval required)**: an email is sent to the account owner. Tell the user to check their email and approve. Once approved, call `approve_request` with the approval ID.
-7. **On success**: present the card summary (last 4, balance, expiry). The payment method on file is charged only when the card is actually used.
+1. Ask the user for the card amount. Convert dollars to cents (e.g. $25 = 2500). Limits depend on the plan — call `get_plan` if unsure.
+2. Call `create_card` with `amount_cents`. The card is funded from the wallet balance.
+3. Resolve any gating status, then retry `create_card`:
+   - **`user_info_required`**: collect the user's phone number and confirm they accept the cardholder terms. Call `submit_user_info` with `terms_accepted: true`.
+   - **`kyc_required`**: run `start_kyc` — identity verification is conversational: the user sends a photo of their government ID (read automatically, they confirm the extracted fields), fills any missing fields, then completes a short browser face scan. Poll `get_kyc_status` until verified.
+   - **`wallet_funding_required`**: the wallet doesn't hold enough. Run the Funding the Wallet workflow for at least the shortfall, then retry.
+   - **`deposit_confirming`**: the money is already on the way — wait the suggested retry interval and call `create_card` again. Do NOT ask the user to pay again.
+4. **If 202 (approval required)**: an email is sent to the account owner. Tell the user to check their email and approve. Once approved, call `approve_request` with the approval ID.
+5. **On success**: present the card summary (last 4, balance, expiry).
 
-All cards are live — there is no test/sandbox mode on the consumer MCP. A card draws on the user's real payment method when used, so confirm before creating one.
+All cards are live — there is no test/sandbox mode on the consumer MCP. A card spends the user's real wallet balance, so confirm before creating one.
+
+### Card Types: Single-use vs Multi-use
+
+- Cards are **single-use by default**: they close automatically after the first approved charge. Right for one-off purchases.
+- For **subscriptions or any merchant that charges repeatedly**, create a multi-use card: `create_card` with `type: "multi_use"` (optional `expires_at` auto-closes it). Multi-use cards stay open until their total limit is spent.
+- Manage multi-use cards: `pause_card` blocks new charges (reversible), `resume_card` unblocks, `update_card_limit` resizes the total limit (raising it draws on the wallet balance).
+
+### AI Cards & TOKENBACK
+
+`create_card` with `scope_preset: "ai_labs"` makes an **AI card**: locked to AI-lab merchants (OpenAI, Anthropic, Gemini — anything else declines at authorization) and earning TOKENBACK rewards on eligible spend. `get_rewards` shows the accrued balance; `redeem_rewards` redeems it.
+
+### Withdrawing from the Wallet
+
+1. Confirm the amount and destination with the user first — withdrawals move real money.
+2. **To a bank**: the user needs a saved recipient — `create_withdrawal_recipient` saves an ACH or international wire destination. Then `withdraw_wallet` with the recipient.
+3. **As USDC on Base**: `withdraw_wallet` with a `0x…` address the user controls.
+4. Withdrawals are executed by the AgentCard team, typically within 1-3 business days, and the user is emailed at each step.
 
 ### Buying & Checking Out (Shopping)
 
@@ -84,7 +130,7 @@ The `buy` tool is the entire shopping surface for supported merchants (DoorDash 
 
 ### Checking Balance
 
-Call `check_balance` with the `card_id`. Format cents as `$XX.XX` (divide by 100).
+Call `check_balance` with the `card_id`. Format cents as `$XX.XX` (divide by 100). For the wallet balance, call `get_wallet`.
 
 ### Viewing Card Details (PAN/CVV)
 
@@ -98,7 +144,7 @@ Call `list_transactions` with the `card_id` for a single card. Optionally filter
 
 To see activity across every card at once, call `list_all_transactions` (no `card_id`) — it returns a flat list of all your transactions, each tagged with the card it belongs to. Supports `limit`, `offset`, and `status`.
 
-For "what did I spend, and how did I pay" questions, call `list_transactions_by_payment_method` — it groups the account's activity by payment method (wallet USDC spend, legacy saved-card spend, sandbox spend, and Apple Pay / Google Pay wallet deposits), with all-time totals per method, merchant name + MCC per row, and the buy order (merchant, order id, total) behind purchases made through `buy`. Line-level items aren't stored server-side — fetch a merchant's order history via `buy` when you need them.
+For "what did I spend, and how did I pay" questions, call `list_transactions_by_payment_method` — it groups the account's activity by payment method (wallet USDC spend, legacy saved-card spend, and Apple Pay / Google Pay wallet deposits), with all-time totals per method, merchant name + MCC per row, and the buy order (merchant, order id, total) behind purchases made through `buy`. Line-level items aren't stored server-side — fetch a merchant's order history via `buy` when you need them.
 
 ### Closing a Card
 
@@ -120,12 +166,12 @@ Then load it in Chrome via `chrome://extensions` (Load unpacked from `~/.agent-c
 
 ### Payment Method Setup
 
-1. Call `setup_payment_method` to get a Stripe checkout URL.
-2. Tell the user to open the URL and save their card details.
-3. Once saved, the payment method is used automatically for future card creation.
-4. To remove: call `remove_payment_method` with the `payment_method_id`.
-5. To see saved methods and which is the default: call `list_payment_methods`.
-6. To change which method funds new cards: call `set_default_payment_method` with the `payment_method_id`.
+Saved payment methods are managed via Stripe and show up as their own spend group in `list_transactions_by_payment_method`; card creation itself is funded from the wallet.
+
+1. Call `setup_payment_method` to get a Stripe checkout URL, and tell the user to open it and save their card details.
+2. To remove: call `remove_payment_method` with the `payment_method_id`.
+3. To see saved methods and which is the default: call `list_payment_methods`.
+4. To change the default: call `set_default_payment_method` with the `payment_method_id`.
 
 ### Plans, Limits & Upgrades
 
@@ -148,20 +194,25 @@ Call `list_connections` to show which third-party apps the user has connected to
 
 - **Never proactively display PAN or CVV.** Only show when the user explicitly asks.
 - **Always confirm before closing a card.** Closing is permanent and irreversible.
-- **Confirm before creating a card.** Every card is live and draws on the user's real payment method when used.
+- **Confirm before creating a card.** Every card is live and spends the user's real wallet balance.
 - **Confirm before placing an order with `buy`.** Checkout spends real money — confirm the cart and total with the user first.
+- **Confirm before withdrawing.** Withdrawals move real money out of the wallet — confirm amount and destination.
+- **Relay payment links exactly.** Funding checkout links are single-use — pass them to the user verbatim, never shortened or paraphrased.
 - **Confirm before unlinking a merchant.** `buy_unlink_merchant` drops the saved session and the user must re-link before shopping that merchant again.
 - **Format money as dollars.** Display `$50.00` not `5000 cents`. Divide cents by 100.
 - **Track IDs across the conversation.** Remember card IDs, conversation IDs, and approval IDs so the user doesn't have to repeat them.
 
 ## Error Handling
 
-- **`beta_capacity_reached` (403)**: User has been waitlisted. Nothing to do but wait.
-- **`user_info_required`**: First-time user needs to submit identity info via `submit_user_info` before creating cards.
-- **`approval_required` (202)**: Action needs human approval. An email was sent. Guide the user to approve, then call `approve_request`.
-- **`payment_method_required`**: No saved payment method. Call `setup_payment_method` first.
-- **`amount_exceeds_limit` / `card_limit_reached` (400)**: A plan limit was hit. Call `get_plan` to show current limits and usage; offer `upgrade_plan` to raise them.
-- **Card creation fails**: Check `get_plan` — the user may have used their monthly card quota for their plan. Suggest upgrading or waiting until next month.
+- **`phone_verification_required`** (funding): a one-time code is needed. `fund_wallet` auto-sends it and reports the masked destination — collect the code, call `verify_phone`, then `fund_wallet` again. If the code was reported as NOT sent, call `start_phone_verification`; if that fails because there's no identity on file, complete `submit_user_info` / `start_kyc` first.
+- **`user_info_required`**: first-time user needs to submit their phone number + accept terms via `submit_user_info` before creating cards.
+- **`kyc_required`**: run `start_kyc` (ID photo → fields → face scan), poll `get_kyc_status`, then retry.
+- **`wallet_funding_required`**: the wallet balance can't cover the card — run the Funding the Wallet workflow, then retry.
+- **`deposit_confirming`**: a deposit is settling — wait the suggested interval and retry. Never ask the user to pay again.
+- **`amount_out_of_range`** (funding): the amount is outside the provider's bounds — the error names the exact allowed range; adjust and retry.
+- **`approval_required` (202)**: action needs human approval. An email was sent. Guide the user to approve, then call `approve_request`.
+- **`amount_exceeds_limit` / `card_limit_reached` (400)**: a plan limit was hit. Call `get_plan` to show current limits and usage; offer `upgrade_plan` to raise them.
+- **Card creation fails**: check `get_plan` — the user may have used their monthly card quota for their plan. Suggest upgrading or waiting until next month.
 
 ## CLI Reference
 
@@ -169,7 +220,9 @@ If MCP tools aren't loaded yet (e.g. the server was just added and the session h
 
 ```bash
 agent-cards cards list                  # list all cards
-agent-cards cards create --amount 5     # create a $5 card (interactive prompt)
+agent-cards cards create --amount 5     # create a $5 card (interactive; walks through identity + funding on first run)
+agent-cards wallet                      # show the wallet + balance (provisions one on first run)
+agent-cards wallet fund --amount 50     # add funds via Apple/Google Pay (first time: prompts for a one-time verification code)
 agent-cards balance <card-id>           # check balance
 agent-cards transactions <card-id>      # list one card's transactions
 agent-cards transactions                # list transactions across all cards
@@ -178,4 +231,4 @@ agent-cards setup-mcp                   # configure MCP server in Claude Code
 agent-cards support                     # start support chat
 ```
 
-**Warning**: Several CLI commands (`cards create`, `signup`, `support`) use interactive prompts that crash in non-interactive shells. Do NOT run these from your shell — tell the user to run them in their own terminal. Commands safe to run from any shell: `whoami`, `cards list`, `balance`, `transactions`, `payment-method`. Prefer MCP tools when available.
+**Warning**: Several CLI commands (`cards create`, `wallet fund`, `signup`, `support`) use interactive prompts that crash or bail in non-interactive shells (`wallet fund` prompts for the one-time verification code when the account isn't verified yet). Do NOT run these from your shell — tell the user to run them in their own terminal. Commands safe to run from any shell: `whoami`, `cards list`, `balance`, `transactions`, `payment-method`, `wallet` (show only). Prefer MCP tools when available.
