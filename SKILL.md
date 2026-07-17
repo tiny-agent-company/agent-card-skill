@@ -7,7 +7,7 @@ metadata:
   homepage: https://agentcard.sh
   docs: https://docs.agentcard.sh
   registry: https://skills.sh
-  version: "1.3.0"
+  version: "1.3.1"
 ---
 
 # AgentCard
@@ -41,7 +41,7 @@ Tools are prefixed `mcp__agent-cards__*`. If no AgentCard tools are available, r
 | `withdraw_wallet` | Withdraw wallet funds to a saved bank account or as USDC on Base (executed by the AgentCard team, typically 1-3 business days) |
 | `create_withdrawal_recipient` | Save a bank account (ACH or international wire) as a withdrawal destination |
 | `redeem_code` | Apply a promo code and credit the wallet (once per user per code) |
-| `list_codes` | Show which promo codes the user has used and which are still available |
+| `list_codes` | List the user's promo-code history — codes they've redeemed or attempted, with state (`used` / `processing` / `available` to retry / `expired`). Cannot discover codes the user has never presented |
 | `start_kyc` | Begin conversational identity verification (government ID photo → confirm fields → short browser face scan) |
 | `get_kyc_status` | Poll identity verification status until verified |
 | `get_rewards` | Show the TOKENBACK rewards balance earned on AI-card spend |
@@ -80,12 +80,12 @@ When the user's intent is unclear, start with `list_cards` to see what exists. U
 ### Funding the Wallet
 
 1. Call `get_wallet` to see the current balance and wallet status.
-2. Call `fund_wallet` with the amount in cents. It returns a **single-use payment link** — relay it to the user EXACTLY as returned (never shorten, unfurl, or paraphrase the URL) and tell them to open it and pay with Apple Pay or Google Pay. Funds land in the wallet within minutes.
+2. Call `fund_wallet` with the amount in cents and the user's `payment_method` — `"apple_pay"` (the default) or `"google_pay"`; ask which they use if you don't know. It returns a **single-use payment link** — relay it to the user EXACTLY as returned (never shorten, unfurl, or paraphrase the URL) and tell them to open it and pay. Funds land in the wallet within minutes.
 3. **If `fund_wallet` reports verification is required**: it automatically sends the user a one-time code and reports where it went (text message or email, masked). Ask the user for the code, call `verify_phone` with it, then call `fund_wallet` again. The verification stays fresh for 60 days.
 4. **If the code never arrives**: call `start_phone_verification` to re-send it (rate-limited to a few sends per 10 minutes — don't spam it).
 5. **If the code can't be sent at all** (no verified identity on file yet — typical for brand-new accounts): the user must complete identity first. Run the Creating a Card ladder (`submit_user_info`, then `start_kyc`) — the verified identity supplies the phone number, then funding works.
 6. The payment link is single-use — if it gets consumed or expires, just call `fund_wallet` again for a fresh one.
-7. If the user has a promo code, `redeem_code` applies it and credits the wallet directly; `list_codes` shows what's been used.
+7. If the user has a promo code, `redeem_code` applies it and credits the wallet directly; `list_codes` shows their code history (including failed attempts they can retry) — it cannot discover codes the user has never presented.
 
 ### Creating a Card
 
