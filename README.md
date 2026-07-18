@@ -126,3 +126,7 @@ Card issued → agent presents summary
 - [AgentCard](https://agentcard.sh) — Product website
 - [skills.sh](https://skills.sh) — Skill registry
 - [MCP Server](https://mcp.agentcard.sh/mcp) — Remote MCP endpoint (OAuth 2.1)
+
+## License & Security
+
+MIT — see [LICENSE](LICENSE). Security reports: see [SECURITY.md](SECURITY.md) or email felipe@agentcard.sh. This repo is a read-only mirror of the canonical skill in the Agentcard monorepo; the published copy is checksummed at `agentcard.sh/.well-known/agent-skills/index.json`.

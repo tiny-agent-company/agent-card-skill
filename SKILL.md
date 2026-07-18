@@ -1,13 +1,13 @@
 ---
 name: agent-card
 description: Manage virtual Visa cards for AI agents with AgentCard. Fund a wallet with Apple Pay or Google Pay, create single-use or multi-use cards, check balances, view credentials, pay for things, shop and check out at merchants like DoorDash, close cards, manage plans, and get support. Use when the user wants to create or manage virtual payment cards for AI agents, fund their AgentCard wallet, pay for online purchases, shop on their behalf, set up agent spending, or configure card billing and limits.
-license: Proprietary
+license: MIT
 compatibility: Requires the AgentCard MCP server (https://mcp.agentcard.sh/mcp). Checkout autofill workflows also need the AgentCard Pay Chrome extension.
 metadata:
   homepage: https://agentcard.sh
   docs: https://docs.agentcard.sh
   registry: https://skills.sh
-  version: "1.3.1"
+  version: "1.3.2"
 ---
 
 # AgentCard
