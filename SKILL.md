@@ -2,12 +2,12 @@
 name: agent-card
 description: Manage virtual Visa cards for AI agents with AgentCard. Fund a wallet with Apple Pay or Google Pay, create single-use or multi-use cards, check balances, view credentials, pay for things, shop and check out at merchants like DoorDash, close cards, manage plans, and get support. Use when the user wants to create or manage virtual payment cards for AI agents, fund their AgentCard wallet, pay for online purchases, shop on their behalf, set up agent spending, or configure card billing and limits.
 license: MIT
-compatibility: Requires the AgentCard MCP server (https://mcp.agentcard.sh/mcp). Checkout autofill workflows also need the AgentCard Pay Chrome extension.
+compatibility: Requires the AgentCard MCP server (https://mcp.agentcard.sh/mcp).
 metadata:
   homepage: https://agentcard.sh
   docs: https://docs.agentcard.sh
   registry: https://skills.sh
-  version: "1.3.2"
+  version: "1.4.0"
 ---
 
 # AgentCard
@@ -58,9 +58,6 @@ Tools are prefixed `mcp__agent-cards__*`. If no AgentCard tools are available, r
 | `get_instructions` | Get the latest shopping/checkout usage guide. Call this BEFORE using `buy` |
 | `buy_list_merchants` | List supported merchants and whether the user has linked each one |
 | `buy_unlink_merchant` | Disconnect a linked merchant (drops the saved session; the user must re-link before shopping it again) |
-| `detect_checkout` | Check if current browser tab is a checkout page (requires Chrome extension) |
-| `fill_card` | Fill an existing card into a checkout form (requires Chrome extension) |
-| `pay_checkout` | Auto-create card and fill checkout form in one step (requires Chrome extension) |
 | `submit_user_info` | Submit the phone number + terms acceptance required before the first card |
 | `get_plan` | Show current plan, card limits, monthly usage, and upgrade options |
 | `upgrade_plan` | Start a Stripe Checkout to upgrade to the Basic plan |
@@ -149,20 +146,6 @@ For "what did I spend, and how did I pay" questions, call `list_transactions_by_
 ### Closing a Card
 
 **Always confirm with the user before calling `close_card`.** State clearly: "This will permanently close the card. Are you sure?" This action is irreversible.
-
-### Paying for Things (Chrome Extension)
-
-For users with the AgentCard Pay Chrome extension:
-
-1. **Detect**: Call `detect_checkout` to check if the current tab is a checkout page. Returns confidence score and detected amount.
-2. **Fill**: Call `fill_card` with a `card_id` to fill an existing card into the form. Or use `pay_checkout` to create a new card and fill it in one step.
-3. **Verify**: After filling, the user submits the form manually.
-
-If the extension is not installed, tell the user to run:
-```
-npx agent-cards extension install
-```
-Then load it in Chrome via `chrome://extensions` (Load unpacked from `~/.agent-cards/chrome-extension/`).
 
 ### Payment Method Setup
 

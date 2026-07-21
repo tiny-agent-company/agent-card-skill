@@ -53,8 +53,9 @@ Do these steps in order. Some steps require me to do something — wait for my c
 
 3. Check if I'm already logged in:
    agent-cards whoami
-   If not logged in, run: agent-cards signup
-   (I need to click the magic link in my email — wait for me to confirm)
+   If not logged in, run: agent-cards login --email <my email>
+   (a one-time code lands in my email — ask me for it, then run:
+    agent-cards login --email <my email> --code <the code>)
 
 4. Connect the MCP server:
    agent-cards setup-mcp

@@ -9,7 +9,13 @@ npm install -g agent-cards
 agent-cards signup
 ```
 
-The user must click the magic link in their email to complete signup. Wait for them to confirm before proceeding.
+Signing in emails the user a one-time **code** (not a link). In an interactive terminal, `agent-cards signup` prompts for it. If you are driving this for a user (no TTY), use the non-interactive flow:
+
+```bash
+agent-cards login --email their@email.com          # emails them a code, exits 2 with code_required
+# ask the user for the code from that email, then:
+agent-cards login --email their@email.com --code 123456
+```
 
 ## Step 2: Connect the MCP Server
 
