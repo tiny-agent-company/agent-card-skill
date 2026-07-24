@@ -9,7 +9,7 @@ npm install -g agent-cards
 agent-cards signup
 ```
 
-Signing in emails the user a one-time **code** (not a link). In an interactive terminal, `agent-cards signup` prompts for it. If you are driving this for a user (no TTY), use the non-interactive flow:
+In an interactive terminal, `agent-cards signup` runs **device login**: it prints a link + short code, the user approves in any browser (nothing is typed back into the terminal). Where the browser flow isn't available it falls back to emailing the user a one-time **code** (never a link) and prompting for it. If you are driving this for a user (no TTY), use the non-interactive flow:
 
 ```bash
 agent-cards login --email their@email.com          # emails them a code, exits 2 with code_required

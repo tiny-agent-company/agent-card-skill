@@ -7,14 +7,14 @@ metadata:
   homepage: https://agentcard.sh
   docs: https://docs.agentcard.sh
   registry: https://skills.sh
-  version: "1.4.0"
+  version: "1.5.0"
 ---
 
 # AgentCard
 
 You help the user manage virtual Visa cards and shop on their behalf through AgentCard MCP tools.
 
-Cards are funded from the user's AgentCard **wallet**. The user adds money with Apple Pay or Google Pay (funds are held as USDC, but the user always funds and spends in USD). First-time funding requires a one-time identity + verification step — the workflows below walk through it.
+VOCABULARY: the user's WALLET is their cards; their BALANCE is their cash. Cards are funded from the **balance**. The user adds money with Apple Pay or Google Pay (funds are held as USDC, but the user always funds and spends in USD). First-time funding requires a one-time identity + verification step — the workflows below walk through it.
 
 ## Setup
 
@@ -28,17 +28,17 @@ Tools are prefixed `mcp__agent-cards__*`. If no AgentCard tools are available, r
 |------|---------|
 | `list_cards` | List all cards with IDs, last four digits, expiry, balance, and status |
 | `create_card` | Create a new virtual Visa card funded from the wallet balance (single-use by default; pass `type: "multi_use"` for subscriptions — see Card Types) |
-| `check_balance` | Check live balance without exposing credentials |
+| `get_card_balance` | Check live balance without exposing credentials |
 | `get_card_details` | Get decrypted PAN, CVV, expiry (may require approval) |
 | `close_card` | Permanently close a card (irreversible) |
 | `pause_card` | Block new charges on a multi-use card (reversible) |
 | `resume_card` | Unblock a paused multi-use card |
 | `update_card_limit` | Resize a multi-use card's total limit (raising it draws on the wallet balance) |
-| `get_wallet` | Show the funding wallet, its balance, and status |
-| `fund_wallet` | Add funds in USD via Apple Pay / Google Pay — returns a single-use payment link to hand the user |
+| `get_balance` | Show the funding wallet, its balance, and status |
+| `add_funds` | Add funds in USD via Apple Pay / Google Pay — returns a single-use payment link to hand the user |
 | `start_phone_verification` | Send (or re-send) the one-time verification code required before funding; reports the masked destination (text or email) |
 | `verify_phone` | Check the one-time code the user reads back (verification stays fresh for 60 days) |
-| `withdraw_wallet` | Withdraw wallet funds to a saved bank account or as USDC on Base (executed by the AgentCard team, typically 1-3 business days) |
+| `withdraw` | Withdraw wallet funds to a saved bank account or as USDC on Base (executed by the AgentCard team, typically 1-3 business days) |
 | `create_withdrawal_recipient` | Save a bank account (ACH or international wire) as a withdrawal destination |
 | `redeem_code` | Apply a promo code and credit the wallet (once per user per code) |
 | `list_codes` | List the user's promo-code history — codes they've redeemed or attempted, with state (`used` / `processing` / `available` to retry / `expired`). Cannot discover codes the user has never presented |
@@ -50,6 +50,15 @@ Tools are prefixed `mcp__agent-cards__*`. If no AgentCard tools are available, r
 | `list_all_transactions` | List transactions across all your cards in one flat list, each tagged with its card (id + last4) |
 | `list_transactions_by_payment_method` | List transactions grouped by payment method (wallet USDC spend, saved-card spend, Apple/Google Pay wallet deposits) with merchant info and the buy order behind each purchase |
 | `whoami` | Show the authenticated account: email, name, plan, KYC + account status, and whether the session is a personal login or a third-party OAuth connection |
+| `attach_card` | Attach the user's own card (BYOC) so purchases charge it directly |
+| `link_account` | Link this login to an existing AgentCard account |
+| `complete_kyc_transfer` | Re-register an existing verification with the active funding rail |
+| `submit_funding_profile` | One-time funding-profile answers (occupation, income band, expected volume) some rails require |
+| `submit_kyc_document` / `submit_kyc_fields` / `check_kyc_document` | Steps of the conversational `start_kyc` flow (ID photo, missing fields, doc status) |
+| `buy_connect` / `buy_connect_status` | Link a merchant account for shopping and check the link's status |
+| `get_settings` / `update_settings` | Read and change notification/account settings |
+| `manage_subscription` | Manage the paid plan subscription |
+| `surprise_me` | Fun: have the agent pick a small treat to buy |
 | `setup_payment_method` | Save a payment method via Stripe |
 | `remove_payment_method` | Remove a saved payment method from Stripe |
 | `list_payment_methods` | List saved payment methods (id, brand, last4, expiry; marks the default) |
@@ -72,16 +81,16 @@ Tools are prefixed `mcp__agent-cards__*`. If no AgentCard tools are available, r
 
 ### Orientation
 
-When the user's intent is unclear, start with `list_cards` to see what exists. Use card IDs from responses in subsequent calls. For money questions, `get_wallet` shows the balance that backs card creation.
+When the user's intent is unclear, start with `list_cards` to see what exists. Use card IDs from responses in subsequent calls. For money questions, `get_balance` shows the balance that backs card creation.
 
 ### Funding the Wallet
 
-1. Call `get_wallet` to see the current balance and wallet status.
-2. Call `fund_wallet` with the amount in cents and the user's `payment_method` — `"apple_pay"` (the default) or `"google_pay"`; ask which they use if you don't know. It returns a **single-use payment link** — relay it to the user EXACTLY as returned (never shorten, unfurl, or paraphrase the URL) and tell them to open it and pay. Funds land in the wallet within minutes.
-3. **If `fund_wallet` reports verification is required**: it automatically sends the user a one-time code and reports where it went (text message or email, masked). Ask the user for the code, call `verify_phone` with it, then call `fund_wallet` again. The verification stays fresh for 60 days.
+1. Call `get_balance` to see the current balance and wallet status.
+2. Call `add_funds` with the amount in cents and the user's `payment_method` — `"apple_pay"` (the default) or `"google_pay"`; ask which they use if you don't know. It returns a **single-use payment link** — relay it to the user EXACTLY as returned (never shorten, unfurl, or paraphrase the URL) and tell them to open it and pay. Funds land in the wallet within minutes.
+3. **If `add_funds` reports verification is required**: it automatically sends the user a one-time code and reports where it went (text message or email, masked). Ask the user for the code, call `verify_phone` with it, then call `add_funds` again. The verification stays fresh for 60 days.
 4. **If the code never arrives**: call `start_phone_verification` to re-send it (rate-limited to a few sends per 10 minutes — don't spam it).
 5. **If the code can't be sent at all** (no verified identity on file yet — typical for brand-new accounts): the user must complete identity first. Run the Creating a Card ladder (`submit_user_info`, then `start_kyc`) — the verified identity supplies the phone number, then funding works.
-6. The payment link is single-use — if it gets consumed or expires, just call `fund_wallet` again for a fresh one.
+6. The payment link is single-use — if it gets consumed or expires, just call `add_funds` again for a fresh one.
 7. If the user has a promo code, `redeem_code` applies it and credits the wallet directly; `list_codes` shows their code history (including failed attempts they can retry) — it cannot discover codes the user has never presented.
 
 ### Creating a Card
@@ -111,8 +120,8 @@ All cards are live — there is no test/sandbox mode on the consumer MCP. A card
 ### Withdrawing from the Wallet
 
 1. Confirm the amount and destination with the user first — withdrawals move real money.
-2. **To a bank**: the user needs a saved recipient — `create_withdrawal_recipient` saves an ACH or international wire destination. Then `withdraw_wallet` with the recipient.
-3. **As USDC on Base**: `withdraw_wallet` with a `0x…` address the user controls.
+2. **To a bank**: the user needs a saved recipient — `create_withdrawal_recipient` saves an ACH or international wire destination. Then `withdraw` with the recipient.
+3. **As USDC on Base**: `withdraw` with a `0x…` address the user controls.
 4. Withdrawals are executed by the AgentCard team, typically within 1-3 business days, and the user is emailed at each step.
 
 ### Buying & Checking Out (Shopping)
@@ -127,13 +136,13 @@ The `buy` tool is the entire shopping surface for supported merchants (DoorDash 
 
 ### Checking Balance
 
-Call `check_balance` with the `card_id`. Format cents as `$XX.XX` (divide by 100). For the wallet balance, call `get_wallet`.
+Call `get_card_balance` with the `card_id`. Format cents as `$XX.XX` (divide by 100). For the wallet balance, call `get_balance`.
 
 ### Viewing Card Details (PAN/CVV)
 
 Only use `get_card_details` when the user explicitly needs the full card number, CVV, or expiry (e.g. to fill a payment form). This may trigger an approval flow.
 
-**Never proactively display PAN or CVV.** Prefer `check_balance` for routine balance checks.
+**Never proactively display PAN or CVV.** Prefer `get_card_balance` for routine balance checks.
 
 ### Viewing Transactions
 
@@ -187,7 +196,7 @@ Call `list_connections` to show which third-party apps the user has connected to
 
 ## Error Handling
 
-- **`phone_verification_required`** (funding): a one-time code is needed. `fund_wallet` auto-sends it and reports the masked destination — collect the code, call `verify_phone`, then `fund_wallet` again. If the code was reported as NOT sent, call `start_phone_verification`; if that fails because there's no identity on file, complete `submit_user_info` / `start_kyc` first.
+- **`phone_verification_required`** (funding): a one-time code is needed. `add_funds` auto-sends it and reports the masked destination — collect the code, call `verify_phone`, then `add_funds` again. If the code was reported as NOT sent, call `start_phone_verification`; if that fails because there's no identity on file, complete `submit_user_info` / `start_kyc` first.
 - **`user_info_required`**: first-time user needs to submit their phone number + accept terms via `submit_user_info` before creating cards.
 - **`kyc_required`**: run `start_kyc` (ID photo → fields → face scan), poll `get_kyc_status`, then retry.
 - **`wallet_funding_required`**: the wallet balance can't cover the card — run the Funding the Wallet workflow, then retry.
@@ -204,9 +213,10 @@ If MCP tools aren't loaded yet (e.g. the server was just added and the session h
 ```bash
 agent-cards cards list                  # list all cards
 agent-cards cards create --amount 5     # create a $5 card (interactive; walks through identity + funding on first run)
-agent-cards wallet                      # show the wallet + balance (provisions one on first run)
-agent-cards wallet fund --amount 50     # add funds via Apple/Google Pay (first time: prompts for a one-time verification code)
-agent-cards balance <card-id>           # check balance
+agent-cards balance                     # show the cash balance (provisions the account on first run)
+agent-cards fund --amount 50            # add cash via Apple/Google Pay (may prompt for a one-time verification code)
+agent-cards kyc                         # verify identity (ID photo + face scan) when a flow asks for it
+agent-cards balance <card-id>           # check a single card
 agent-cards transactions <card-id>      # list one card's transactions
 agent-cards transactions                # list transactions across all cards
 agent-cards payment-method              # manage payment methods

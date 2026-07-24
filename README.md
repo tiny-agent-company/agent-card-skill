@@ -89,15 +89,15 @@ agent-cards signup
 
 | Capability | Tools |
 |-----------|-------|
-| Fund the wallet | `get_wallet`, `fund_wallet`, `start_phone_verification`, `verify_phone`, `redeem_code`, `list_codes` |
+| Fund the wallet | `get_balance`, `add_funds`, `start_phone_verification`, `verify_phone`, `redeem_code`, `list_codes` |
 | Issue virtual cards | `create_card`, `submit_user_info` |
 | Verify identity | `start_kyc`, `get_kyc_status` |
-| Manage cards | `list_cards`, `check_balance`, `get_card_details`, `close_card`, `pause_card`, `resume_card`, `update_card_limit` |
-| Withdraw funds | `withdraw_wallet`, `create_withdrawal_recipient` |
+| Manage cards | `list_cards`, `get_card_balance`, `get_card_details`, `close_card`, `pause_card`, `resume_card`, `update_card_limit` |
+| Withdraw funds | `withdraw`, `create_withdrawal_recipient` |
 | Rewards | `get_rewards`, `redeem_rewards` |
 | View spending | `list_transactions`, `list_all_transactions`, `list_transactions_by_payment_method` |
 | Shop & check out | `buy`, `get_instructions`, `buy_list_merchants`, `buy_unlink_merchant` |
-| Pay for things | `detect_checkout`, `fill_card`, `pay_checkout` |
+| Bring your own card | `attach_card` |
 | Payment methods | `setup_payment_method`, `remove_payment_method`, `list_payment_methods`, `set_default_payment_method` |
 | Plans & limits | `get_plan`, `upgrade_plan`, `cancel_plan` |
 | Connected apps | `list_connections` |
