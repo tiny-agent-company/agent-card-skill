@@ -111,7 +111,7 @@ All cards are live — there is no test/sandbox mode on the consumer MCP. A card
 
 - Cards are **single-use by default**: they close automatically after the first approved charge. Right for one-off purchases.
 - For **subscriptions or any merchant that charges repeatedly**, create a multi-use card: `create_card` with `type: "multi_use"` (optional `expires_at` auto-closes it). Multi-use cards stay open until their total limit is spent.
-- Manage multi-use cards: `pause_card` blocks new charges (reversible), `resume_card` unblocks, `update_card_limit` resizes the total limit (raising it draws on the wallet balance).
+- Manage multi-use cards: `pause_card` blocks new charges (reversible), `resume_card` unblocks, `update_card_limit` resizes the total limit (raising it draws on the wallet balance). Cards funded from a company balance are resized by the company server-side (`POST /api/v1/cards/{id}/topups`), not through `update_card_limit`.
 
 ### AI Cards & TOKENBACK
 
