@@ -27,7 +27,7 @@ Tools are prefixed `mcp__agent-cards__*`. If no AgentCard tools are available, r
 | Tool | Purpose |
 |------|---------|
 | `list_cards` | List all cards with IDs, last four digits, expiry, balance, and status |
-| `create_card` | Create a new virtual Visa card funded from the wallet balance (single-use by default; pass `type: "multi_use"` for subscriptions — see Card Types) |
+| `create_card` | The one card tool: create a new virtual Visa card (single-use by default; pass `type: "multi_use"` for subscriptions — see Card Types). First-time users start by adding their own Visa or Mastercard via a secure link (no KYC, no funding); `source: "issued"` funds it from the wallet balance instead |
 | `get_card_balance` | Check live balance without exposing credentials |
 | `get_card_details` | Get decrypted PAN, CVV, expiry (may require approval) |
 | `close_card` | Permanently close a card (irreversible) |
@@ -50,7 +50,6 @@ Tools are prefixed `mcp__agent-cards__*`. If no AgentCard tools are available, r
 | `list_all_transactions` | List transactions across all your cards in one flat list, each tagged with its card (id + last4) |
 | `list_transactions_by_payment_method` | List transactions grouped by payment method (wallet USDC spend, saved-card spend, Apple/Google Pay wallet deposits) with merchant info and the buy order behind each purchase |
 | `whoami` | Show the authenticated account: email, name, plan, KYC + account status, and whether the session is a personal login or a third-party OAuth connection |
-| `attach_card` | Attach the user's own card (BYOC) so purchases charge it directly |
 | `link_account` | Link this login to an existing AgentCard account |
 | `complete_kyc_transfer` | Re-register an existing verification with the active funding rail |
 | `submit_funding_profile` | One-time funding-profile answers (occupation, income band, expected volume) some rails require |
@@ -96,8 +95,11 @@ When the user's intent is unclear, start with `list_cards` to see what exists. U
 ### Creating a Card
 
 1. Ask the user for the card amount. Convert dollars to cents (e.g. $25 = 2500). Limits depend on the plan — call `get_plan` if unsure.
-2. Call `create_card` with `amount_cents`. The card is funded from the wallet balance.
+2. Call `create_card` with `amount_cents`. First-time users (no card on file) start by adding their own Visa or Mastercard; established users mint against their active added card (or saved default), or from the wallet balance with `source: "issued"`.
 3. Resolve any gating status, then retry `create_card`:
+   - **`attach_started`**: send the user the secure link (a one-time code from their bank, then a passkey — about a minute), then call `create_card` again with the SAME arguments; the card mints against the added card. No identity verification, no prefunding.
+   - **`attach_pending`**: the user hasn't finished the link. Nudge them to complete it, then retry. Pass `restart_setup: true` for a fresh link (lost link, or adding another card).
+   - **`issuing_suggested`**: that card can't be added (unsupported network/bank, commercial card, or adding cards unavailable). Offer the fallback — an Agentcard funded from the wallet balance, which requires identity verification the first time — and only after the user agrees call `create_card` with `source: "issued"`.
    - **`user_info_required`**: collect the user's phone number and confirm they accept the cardholder terms. Call `submit_user_info` with `terms_accepted: true`.
    - **`kyc_required`**: run `start_kyc` — identity verification is conversational: the user sends a photo of their government ID (read automatically, they confirm the extracted fields), fills any missing fields, then completes a short browser face scan. Poll `get_kyc_status` until verified.
    - **`wallet_funding_required`**: the wallet doesn't hold enough. Run the Funding the Wallet workflow for at least the shortfall, then retry.
