@@ -78,7 +78,7 @@ agent-cards signup
 ## What's Included
 
 **Skill** (`SKILL.md`) — Procedural knowledge that teaches the agent:
-- When and how to use each of the 44 AgentCard tools
+- When and how to use each of the AgentCard tools
 - Workflows: wallet funding (with the one-time verification code), card creation, single-use vs multi-use cards, balance checks, shopping & checkout (`buy`), payments, checkout autofill, withdrawals, plans, support
 - Safety rules: never expose PAN/CVV unprompted, confirm before closing cards, placing an order, or withdrawing
 - Error handling: verification codes, KYC, funding gates, approval flows
@@ -97,7 +97,7 @@ agent-cards signup
 | Rewards | `get_rewards`, `redeem_rewards` |
 | View spending | `list_transactions`, `list_all_transactions`, `list_transactions_by_payment_method` |
 | Shop & check out | `buy`, `get_instructions`, `buy_list_merchants`, `buy_unlink_merchant` |
-| Bring your own card | `attach_card` |
+| Bring your own card | `create_card` (starts by adding the user's own card; the former `attach_card`/`add_card` tool was merged into it) |
 | Payment methods | `setup_payment_method`, `remove_payment_method`, `list_payment_methods`, `set_default_payment_method` |
 | Plans & limits | `get_plan`, `upgrade_plan`, `cancel_plan` |
 | Connected apps | `list_connections` |
