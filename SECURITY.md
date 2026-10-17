@@ -10,7 +10,7 @@ The skill's safety rules require agents to confirm with the user before any acti
 
 If you find a security issue in this skill's guidance, the `agent-cards` CLI, the MCP server, or any Agentcard surface:
 
-- Email **felipe@agentcard.sh**
+- Email **security@agentcard.com**
 - Include steps to reproduce and the surface affected (skill / CLI / MCP / API)
 
 We respond quickly — usually the same day.
