@@ -20,6 +20,8 @@ VOCABULARY: the user's WALLET is their cards; their BALANCE is their cash. Cards
 
 Tools are prefixed `mcp__agent-cards__*`. If no AgentCard tools are available, read `references/setup.md` and guide the user through connecting the MCP server.
 
+To wire Agentcard into a company's own application (Vault link + Purchase API, the playbook `agent-cards integrate` runs), read `references/integrate.md`.
+
 **Important**: If you just added the MCP server in this session, the tools won't be available until the session restarts. Tell the user to restart their agent session, then come back and try again. Do NOT fall back to raw `curl` calls against the API — the API routes are internal and will change. Use either the MCP tools or the CLI (see [CLI Reference](#cli-reference)).
 
 ## Available Tools
@@ -27,7 +29,7 @@ Tools are prefixed `mcp__agent-cards__*`. If no AgentCard tools are available, r
 | Tool | Purpose |
 |------|---------|
 | `list_cards` | List all cards with IDs, last four digits, expiry, balance, and status |
-| `create_card` | Create a new virtual Visa card funded from the wallet balance (single-use by default; pass `type: "multi_use"` for subscriptions — see Card Types) |
+| `create_card` | The one card tool: create a new virtual Visa card (single-use by default; pass `type: "multi_use"` for subscriptions, see Card Types). First-time users start by putting their own card in their vault via a secure link (any card, no KYC, no funding; purchases then run through `buy`); `source: "issued"` funds a card number from the wallet balance instead |
 | `get_card_balance` | Check live balance without exposing credentials |
 | `get_card_details` | Get decrypted PAN, CVV, expiry (may require approval) |
 | `close_card` | Permanently close a card (irreversible) |
@@ -50,7 +52,6 @@ Tools are prefixed `mcp__agent-cards__*`. If no AgentCard tools are available, r
 | `list_all_transactions` | List transactions across all your cards in one flat list, each tagged with its card (id + last4) |
 | `list_transactions_by_payment_method` | List transactions grouped by payment method (wallet USDC spend, saved-card spend, Apple/Google Pay wallet deposits) with merchant info and the buy order behind each purchase |
 | `whoami` | Show the authenticated account: email, name, plan, KYC + account status, and whether the session is a personal login or a third-party OAuth connection |
-| `attach_card` | Attach the user's own card (BYOC) so purchases charge it directly |
 | `link_account` | Link this login to an existing AgentCard account |
 | `complete_kyc_transfer` | Re-register an existing verification with the active funding rail |
 | `submit_funding_profile` | One-time funding-profile answers (occupation, income band, expected volume) some rails require |
@@ -65,7 +66,7 @@ Tools are prefixed `mcp__agent-cards__*`. If no AgentCard tools are available, r
 | `set_default_payment_method` | Choose the default saved payment method |
 | `buy` | Shop and check out at a supported merchant (DoorDash, Good Eggs, Rappi) from a natural-language request. This is the entire shopping surface — it builds the cart, asks for the delivery address, confirms the total, and places the order, auto-creating a card to pay |
 | `get_instructions` | Get the latest shopping/checkout usage guide. Call this BEFORE using `buy` |
-| `buy_list_merchants` | List supported merchants and whether the user has linked each one |
+| `buy_list_merchants` | List the merchants that use an account and whether the user has linked each one, and count the online stores `buy` buys from with no account. Pass `query` to check one store by name or domain |
 | `buy_unlink_merchant` | Disconnect a linked merchant (drops the saved session; the user must re-link before shopping it again) |
 | `submit_user_info` | Submit the phone number + terms acceptance required before the first card |
 | `get_plan` | Show current plan, card limits, monthly usage, and upgrade options |
@@ -96,8 +97,12 @@ When the user's intent is unclear, start with `list_cards` to see what exists. U
 ### Creating a Card
 
 1. Ask the user for the card amount. Convert dollars to cents (e.g. $25 = 2500). Limits depend on the plan — call `get_plan` if unsure.
-2. Call `create_card` with `amount_cents`. The card is funded from the wallet balance.
+2. Call `create_card` with `amount_cents`. First-time users (no card on file) start by putting their own card in their vault; established users mint against their active added card (or saved default), or from the wallet balance with `source: "issued"`.
 3. Resolve any gating status, then retry `create_card`:
+   - **`vault_started`**: send the user the secure vault link (they type their card once and lock it on their device with their passkey or master password; any card works, no identity verification, no prefunding). A vaulted card pays through `buy` with an approval on their device (their passkey or master password) and never becomes a card number, so once the card is saved use `buy` for purchases instead of calling `create_card` again. `restart_setup: true` mints a fresh link. If the user specifically needs a card number, offer an Agentcard funded from the wallet balance (identity verification the first time) and only after they agree call `create_card` with `source: "issued"`.
+   - **`vault_ready`**: the user's own card is already in their vault. Use `buy`; `source: "issued"` is the only way to a card number.
+   - **`attach_pending`**: an older hands-free (network-token) enrollment is still in flight. Nudge the user to finish that link, then retry.
+   - **`issuing_suggested`** (older servers only; current servers always open the vault): offer the fallback, an Agentcard funded from the wallet balance (identity verification the first time), and only after the user agrees call `create_card` with `source: "issued"`.
    - **`user_info_required`**: collect the user's phone number and confirm they accept the cardholder terms. Call `submit_user_info` with `terms_accepted: true`.
    - **`kyc_required`**: run `start_kyc` — identity verification is conversational: the user sends a photo of their government ID (read automatically, they confirm the extracted fields), fills any missing fields, then completes a short browser face scan. Poll `get_kyc_status` until verified.
    - **`wallet_funding_required`**: the wallet doesn't hold enough. Run the Funding the Wallet workflow for at least the shortfall, then retry.
@@ -113,9 +118,11 @@ All cards are live — there is no test/sandbox mode on the consumer MCP. A card
 - For **subscriptions or any merchant that charges repeatedly**, create a multi-use card: `create_card` with `type: "multi_use"` (optional `expires_at` auto-closes it). Multi-use cards stay open until their total limit is spent.
 - Manage multi-use cards: `pause_card` blocks new charges (reversible), `resume_card` unblocks, `update_card_limit` resizes the total limit (raising it draws on the wallet balance). Cards funded from a company balance are resized by the company server-side (`POST /api/v1/cards/{id}/topups`), not through `update_card_limit`.
 
-### AI Cards & TOKENBACK
+### AI Cards, Presets & TOKENBACK
 
-`create_card` with `scope_preset: "ai_labs"` makes an **AI card**: locked to AI-lab merchants (OpenAI, Anthropic, Gemini — anything else declines at authorization) and earning TOKENBACK rewards on eligible spend. `get_rewards` shows the accrued balance; `redeem_rewards` redeems it.
+`create_card` with `preset: "ai_labs"` (prefer this) makes an **AI card**: locked to AI-lab merchants (OpenAI, Anthropic, Gemini — anything else declines at authorization) and earning TOKENBACK on eligible spend. Pair with `type: "multi_use"` for a lasting card. The legacy `scope_preset: "ai_labs"` still works and forces multi-use.
+
+Beyond AI cards, any card can take a Preset: built-in names (`daily`, `weekday_meals`, `cli_only`, `ai_labs`), a name from `list_presets` / `save_preset`, or omit `preset` to inherit the app → account default. Manage with `get_card_preset` / `set_card_preset` (optional `for_app` for a per-app default). After a category/merchant deny or Watch notification, remember a merchant with `allow_card_merchant`. A category rule runs strict (refuse) by default, or `mode: "watch"` (allow + notify). `get_rewards` / `redeem_rewards` cover TOKENBACK.
 
 ### Withdrawing from the Wallet
 
@@ -132,7 +139,7 @@ The `buy` tool is the entire shopping surface for supported merchants (DoorDash 
 2. **Start an order** with a natural-language request, e.g. `buy("order a caesar salad from Zuni on DoorDash")`. It returns a `conversation_id`.
 3. **Continue the same order** by calling `buy` again with that `conversation_id` to answer its questions (delivery address, confirm the cart + total) or to place the order. Keep passing the same `conversation_id` so the cart and context persist.
 4. **Checkout only happens after the user explicitly confirms.** This is a real purchase — confirm the cart and total with the user before placing the order.
-5. Use `buy_list_merchants` to see which merchants are available and whether the user has linked each. To disconnect one, use `buy_unlink_merchant` — confirm with the user first, since it drops the saved session and they must re-link before shopping that merchant again.
+5. Use `buy_list_merchants` to see which merchants are available and whether the user has linked each. To check one store, pass its name or domain as `query`: an online store such as Nike or nordstrom.com needs no link, so ask `buy` for the product and name the store. To disconnect one, use `buy_unlink_merchant`, and confirm with the user first, since it drops the saved session and they must re-link before shopping that merchant again.
 
 ### Checking Balance
 
